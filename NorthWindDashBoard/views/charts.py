@@ -22,7 +22,7 @@ class StatsState(rx.State):
     orders_count:int
     order_dates:list[str]=[]
     order_date_selected:str=""
-    
+    df_merged:pd.DataFrame=None
         
     def toggle_areachart(self):
         self.area_toggle = not self.area_toggle
@@ -36,22 +36,22 @@ class StatsState(rx.State):
                 self.order_dates=df_orders['YearMonth'].unique().tolist()
                 self.order_date_selected=df_orders.iloc[0]['YearMonth']
                 self.load_by_date()
+                
     def on_change(self,ev):
          self.order_date_selected=ev
          self.load_by_date()
         
     def load_by_date(self):
             with rx.session() as session:
+                if self.df_merged is None:
+                    df_orders = pd.read_sql('select * from orders',session.connection())
+                    df = pd.read_sql('select * from order_details',session.connection())
+                    self.df_merged= df.merge(df_orders)           
 
-                df_orders = pd.read_sql('select * from orders',session.connection())
-                df = pd.read_sql('select * from order_details',session.connection())
-
-                df_merged= df.merge(df_orders)           
-
-                df_merged['YearMonth']= pd.to_datetime(df_merged['order_date']).dt.strftime('%Y-%m')
+                self.df_merged['YearMonth']= pd.to_datetime(self.df_merged['order_date']).dt.strftime('%Y-%m')
 
                 value= self.order_date_selected    
-                df_filtered=df_merged.query("YearMonth==@value").copy()
+                df_filtered=self.df_merged.query("YearMonth==@value").copy()
 
                 df_filtered['final_price']= df_filtered['unit_price'] * df_filtered['quantity']
                 self.total_sales= df_filtered['final_price'].sum()             
@@ -69,8 +69,12 @@ class StatsState(rx.State):
                 self.revenue_data=result.to_dict(orient='records')
 
                 orders_result= df_filtered.groupby(['order_date'])['order_id'].count().reset_index()
+                # number_of_orders
+                orders_result = orders_result.rename(columns={
+                    'order_id': 'number_of_orders'                   
+                })
                 self.orders_data=orders_result.to_dict(orient='records')      
-                print(orders_result.head())
+                #print(orders_result.head())
                 
 
                 
@@ -151,43 +155,22 @@ def revenue_chart() -> rx.Component:
 
 
 def orders_chart() -> rx.Component:
-    return rx.cond(
-        StatsState.area_toggle,
-        rx.recharts.area_chart(
-            _create_gradient("purple", "colorPurple"),
-            _custom_tooltip("purple"),
-            rx.recharts.cartesian_grid(
-                stroke_dasharray="3 3",
-            ),
-            rx.recharts.area(
-                data_key="Orders",
-                stroke=rx.color("purple", 9),
-                fill="url(#colorPurple)",
-                type_="monotone",
-            ),
-            rx.recharts.x_axis(data_key="Date", scale="auto"),
-            rx.recharts.y_axis(),
-            rx.recharts.legend(),
-            data=StatsState.orders_data,
-            height=425,
-        ),
-        rx.recharts.bar_chart(
-            _custom_tooltip("purple"),
-            rx.recharts.cartesian_grid(
-                stroke_dasharray="3 3",
-            ),
-            rx.recharts.bar(
-                data_key="Orders",
-                stroke=rx.color("purple", 9),
-                fill=rx.color("purple", 7),
-            ),
-            rx.recharts.x_axis(data_key="Date", scale="auto"),
-            rx.recharts.y_axis(),
-            rx.recharts.legend(),
-            data=StatsState.orders_data,
-            height=425,
-        ),
-    )
+      return rx.cond(
+            StatsState.area_toggle,
+                rx.recharts.line_chart(
+                rx.recharts.line(
+                    data_key="number_of_orders"
+                    
+                ),           
+                rx.recharts.x_axis(data_key="order_date"),
+                rx.recharts.y_axis(),
+                rx.recharts.graphing_tooltip(),
+                rx.recharts.legend(),
+                data=StatsState.orders_data,
+                width="100%",
+                height=300,
+            )
+        )
 
 
 def pie_chart() -> rx.Component:

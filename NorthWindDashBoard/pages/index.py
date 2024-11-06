@@ -7,12 +7,10 @@ from ..views.stats_cards import stats_cards
 from ..views.charts import (    
     revenue_chart,
     orders_chart,
-    area_toggle,
     pie_chart,
-    timeframe_select,
     StatsState,
 )
-from ..views.adquisition_view import adquisition
+
 from ..components.card import card
 import datetime
 
@@ -49,13 +47,12 @@ def index() -> rx.Component:
         filters(),
         stats_cards(),
         card(
-            rx.hstack(
-                tab_content_header(),
+            rx.hstack(                
                 rx.segmented_control.root(                   
                     rx.segmented_control.item("Revenue", value="revenue"),
                     rx.segmented_control.item("Orders", value="orders"),
                     margin_bottom="1.5em",
-                    default_value="revenue",
+                    default_value=StatsState.selected_tab,
                     on_change=StatsState.set_selected_tab,
                 ),
                 width="100%",
@@ -67,34 +64,20 @@ def index() -> rx.Component:
                 ("orders", orders_chart()),
             ),
         ),
-        rx.grid(
-            card(
+        card(
                 rx.hstack(
                     rx.hstack(
                         rx.icon("user-round-search", size=20),
-                        rx.text("Visitors Analytics", size="4", weight="medium"),
+                        rx.text("Orders", size="4", weight="medium"),
                         align="center",
                         spacing="2",
-                    ),
-                    timeframe_select(),
+                    ),                    
                     align="center",
                     width="100%",
                     justify="between",
                 ),
                 pie_chart(),
-            ),
-            card(
-                rx.hstack(
-                    rx.icon("globe", size=20),
-                    rx.text("Acquisition Overview", size="4", weight="medium"),
-                    align="center",
-                    spacing="2",
-                    margin_bottom="2.5em",
-                ),
-                rx.vstack(
-                    adquisition(),
-                ),
-            ),
+            ),            
             gap="1rem",
             grid_template_columns=[
                 "1fr",
@@ -103,8 +86,5 @@ def index() -> rx.Component:
                 "repeat(2, 1fr)",
                 "repeat(2, 1fr)",
             ],
-            width="100%",
-        ),
-        spacing="8",
-        width="100%",
+            width="100%"     
     )
