@@ -5,16 +5,12 @@ from reflex.components.radix.themes.base import (
     LiteralAccentColor,
 )
 
-from ..models.customers import Customers, OrderDetail
-
-
-
-
+from ..models.customers import Customers, Order
 
 
 class StatsState(rx.State):
     area_toggle: bool = True
-    selected_tab: str = "users"
+    selected_tab: str = "revenue"
     timeframe: str = "Monthly"
     users_data = []
     revenue_data = []
@@ -24,18 +20,59 @@ class StatsState(rx.State):
     users_count:int
     total_sales:float
     orders_count:int
-
+    order_dates:list[str]=[]
+    order_date_selected:str=""
+    
+        
     def toggle_areachart(self):
         self.area_toggle = not self.area_toggle
 
     def load_data(self):      
        
         with rx.session() as session:
-                self.users_count = session.exec(func.count(Customers.customer_id)).scalar()
+                self.users_count = session.exec(func.count(Customers.customer_id)).scalar()                
+                df_orders = pd.read_sql('select * from orders',session.connection())
+                df_orders['YearMonth']= pd.to_datetime(df_orders['order_date']).dt.strftime('%Y-%m')
+                self.order_dates=df_orders['YearMonth'].unique().tolist()
+                self.order_date_selected=df_orders.iloc[0]['YearMonth']
+                self.load_by_date()
+    def on_change(self,ev):
+         self.order_date_selected=ev
+         self.load_by_date()
+        
+    def load_by_date(self):
+            with rx.session() as session:
+
+                df_orders = pd.read_sql('select * from orders',session.connection())
                 df = pd.read_sql('select * from order_details',session.connection())
-                df['final_price']= df['unit_price'] * df['quantity']
-                self.total_sales= df['final_price'].sum()
-                self.orders_count= len(df)
+
+                df_merged= df.merge(df_orders)           
+
+                df_merged['YearMonth']= pd.to_datetime(df_merged['order_date']).dt.strftime('%Y-%m')
+
+                value= self.order_date_selected    
+                df_filtered=df_merged.query("YearMonth==@value").copy()
+
+                df_filtered['final_price']= df_filtered['unit_price'] * df_filtered['quantity']
+                self.total_sales= df_filtered['final_price'].sum()             
+
+                         
+                self.orders_count=  len(df_filtered.groupby('order_id'))
+                
+                df_filtered['order_date']=df_filtered['order_date'].astype(str)
+                # Step 5: Group by year-month and day, and sum the order amounts (Freight in this example)
+                result = df_filtered.groupby(['order_date'])['final_price'].sum().reset_index()               
+               
+                result = result.rename(columns={
+                    'final_price': 'revenue'                   
+                })
+                self.revenue_data=result.to_dict(orient='records')
+
+                orders_result= df_filtered.groupby(['order_date'])['order_id'].count().reset_index()
+                self.orders_data=orders_result.to_dict(orient='records')      
+                print(orders_result.head())
+                
+
                 
 def area_toggle() -> rx.Component:
     return rx.cond(
@@ -92,84 +129,25 @@ def _custom_tooltip(color: LiteralAccentColor) -> rx.Component:
     )
 
 
-def users_chart() -> rx.Component:
-    return rx.cond(
-        StatsState.area_toggle,
-        rx.recharts.area_chart(
-            _create_gradient("blue", "colorBlue"),
-            _custom_tooltip("blue"),
-            rx.recharts.cartesian_grid(
-                stroke_dasharray="3 3",
-            ),
-            rx.recharts.area(
-                data_key="Users",
-                stroke=rx.color("blue", 9),
-                fill="url(#colorBlue)",
-                type_="monotone",
-            ),
-            rx.recharts.x_axis(data_key="Date", scale="auto"),
-            rx.recharts.y_axis(),
-            rx.recharts.legend(),
-            data=StatsState.users_data,
-            height=425,
-        ),
-        rx.recharts.bar_chart(
-            rx.recharts.cartesian_grid(
-                stroke_dasharray="3 3",
-            ),
-            _custom_tooltip("blue"),
-            rx.recharts.bar(
-                data_key="Users",
-                stroke=rx.color("blue", 9),
-                fill=rx.color("blue", 7),
-            ),
-            rx.recharts.x_axis(data_key="Date", scale="auto"),
-            rx.recharts.y_axis(),
-            rx.recharts.legend(),
-            data=StatsState.users_data,
-            height=425,
-        ),
-    )
 
 
 def revenue_chart() -> rx.Component:
     return rx.cond(
-        StatsState.area_toggle,
-        rx.recharts.area_chart(
-            _create_gradient("green", "colorGreen"),
-            _custom_tooltip("green"),
-            rx.recharts.cartesian_grid(
-                stroke_dasharray="3 3",
-            ),
-            rx.recharts.area(
-                data_key="Revenue",
-                stroke=rx.color("green", 9),
-                fill="url(#colorGreen)",
-                type_="monotone",
-            ),
-            rx.recharts.x_axis(data_key="Date", scale="auto"),
-            rx.recharts.y_axis(),
-            rx.recharts.legend(),
-            data=StatsState.revenue_data,
-            height=425,
-        ),
-        rx.recharts.bar_chart(
-            _custom_tooltip("green"),
-            rx.recharts.cartesian_grid(
-                stroke_dasharray="3 3",
-            ),
-            rx.recharts.bar(
-                data_key="Revenue",
-                stroke=rx.color("green", 9),
-                fill=rx.color("green", 7),
-            ),
-            rx.recharts.x_axis(data_key="Date", scale="auto"),
-            rx.recharts.y_axis(),
-            rx.recharts.legend(),
-            data=StatsState.revenue_data,
-            height=425,
-        ),
-    )
+            StatsState.area_toggle,
+                rx.recharts.line_chart(
+                rx.recharts.line(
+                    data_key="revenue",
+                ),           
+                rx.recharts.x_axis(data_key="order_date"),
+                rx.recharts.y_axis(),
+                rx.recharts.graphing_tooltip(),
+                rx.recharts.legend(),
+                data=StatsState.revenue_data,
+                width="100%",
+                height=300,
+            )
+        )
+    
 
 
 def orders_chart() -> rx.Component:

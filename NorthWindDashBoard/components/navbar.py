@@ -29,11 +29,8 @@ def menu_item(text: str, url: str) -> rx.Component:
             rx.match(
                 text,
                 ("Overview", menu_item_icon("home")),
-                ("Table", menu_item_icon("table-2")),
-                ("About", menu_item_icon("book-open")),
-                ("Profile", menu_item_icon("user")),
-                ("Settings", menu_item_icon("settings")),
-                menu_item_icon("layout-dashboard"),
+                ("Table", menu_item_icon("table-2")),             
+                 menu_item_icon("layout-dashboard"),
             ),
             rx.text(text, size="4", weight="regular"),
             color=rx.cond(
@@ -108,10 +105,7 @@ def menu_button() -> rx.Component:
     # The ordered page routes.
     ordered_page_routes = [
         "/",
-        "/table",
-        "/about",
-        "/profile",
-        "/settings",
+        "/table"        
     ]
 
     # Get the decorated pages.
@@ -150,9 +144,7 @@ def menu_button() -> rx.Component:
                             url=page["route"],
                         )
                         for page in ordered_pages
-                    ],
-                    rx.spacer(),
-                    navbar_footer(),
+                    ],                 
                     spacing="4",
                     width="100%",
                 ),

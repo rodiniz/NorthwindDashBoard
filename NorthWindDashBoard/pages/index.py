@@ -2,9 +2,9 @@
 
 import reflex as rx
 from ..templates import template
+from ..views.filters import filters
 from ..views.stats_cards import stats_cards
-from ..views.charts import (
-    users_chart,
+from ..views.charts import (    
     revenue_chart,
     orders_chart,
     area_toggle,
@@ -32,13 +32,11 @@ def _time_data() -> rx.Component:
 
 def tab_content_header() -> rx.Component:
     return rx.hstack(
-        _time_data(),
-        area_toggle(),
+        _time_data(),       
         align="center",
         width="100%",
         spacing="4",
     )
-
 
 @template(route="/", title="Overview", on_load=StatsState.load_data)
 def index() -> rx.Component:
@@ -48,25 +46,23 @@ def index() -> rx.Component:
         The UI for the overview page.
     """
     return rx.vstack(
-         
+        filters(),
         stats_cards(),
         card(
             rx.hstack(
                 tab_content_header(),
-                rx.segmented_control.root(
-                    rx.segmented_control.item("Users", value="users"),
+                rx.segmented_control.root(                   
                     rx.segmented_control.item("Revenue", value="revenue"),
                     rx.segmented_control.item("Orders", value="orders"),
                     margin_bottom="1.5em",
-                    default_value="users",
+                    default_value="revenue",
                     on_change=StatsState.set_selected_tab,
                 ),
                 width="100%",
                 justify="between",
-            ),
+            ),           
             rx.match(
-                StatsState.selected_tab,
-                ("users", users_chart()),
+                StatsState.selected_tab,               
                 ("revenue", revenue_chart()),
                 ("orders", orders_chart()),
             ),

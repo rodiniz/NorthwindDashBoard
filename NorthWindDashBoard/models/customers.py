@@ -41,8 +41,8 @@ class Employee(rx.Model, table=True):
     #reports_to = Column(ForeignKey('employees.employee_id'))
     #photo_path = Column(String(255))
 
-    #parent = relationship('Employee', remote_side=[employee_id])
-    #territorys = relationship('Territory', secondary='employee_territories')
+    #parent = sqlmodel.Relationship('Employee', remote_side=[employee_id])
+    #territorys = sqlmodel.Relationship('Territory', secondary='employee_territories')
 
 
 class Region(rx.Model, table=True):

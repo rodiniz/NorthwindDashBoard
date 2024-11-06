@@ -77,11 +77,8 @@ def sidebar_item(text: str, url: str) -> rx.Component:
             rx.match(
                 text,
                 ("Overview", sidebar_item_icon("home")),
-                ("Table", sidebar_item_icon("table-2")),
-                ("About", sidebar_item_icon("book-open")),
-                ("Profile", sidebar_item_icon("user")),
-                ("Settings", sidebar_item_icon("settings")),
-                sidebar_item_icon("layout-dashboard"),
+                ("Table", sidebar_item_icon("table-2")),              
+                 sidebar_item_icon("layout-dashboard"),
             ),
             rx.text(text, size="3", weight="regular"),
             color=rx.cond(

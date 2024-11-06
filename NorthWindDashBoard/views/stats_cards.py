@@ -26,7 +26,7 @@ def stats_card(
                 ),
                 rx.vstack(
                     rx.heading(
-                        f"{extra_char} #{value:,}",
+                        f"{extra_char} {value:,}",
                         size="6",
                         weight="bold",
                     ),
