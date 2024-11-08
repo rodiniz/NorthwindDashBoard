@@ -15,9 +15,7 @@ class StatsState(rx.State):
     timeframe: str = "Monthly"
     users_data = []
     revenue_data = []
-    orders_data = []
-    device_data = []
-    yearly_device_data = []
+    orders_data = []    
     users_count:int
     total_sales:float
     orders_count:int
@@ -27,7 +25,7 @@ class StatsState(rx.State):
 
     order_ids:list[str]=[]
     order_id_selected:str=""
-    orders_table_data=list[dict]=[]
+    orders_table_data:list[dict]
     df_orders:pd.DataFrame=None
 
         
@@ -38,7 +36,7 @@ class StatsState(rx.State):
        
         with rx.session() as session:
                 self.users_count = session.exec(func.count(Customers.customer_id)).scalar()                
-                df_orders = pd.read_sql('select * from orders',session.connection())
+                df_orders = pd.read_sql("SELECT  * from orders",session.connection())
                 df_orders['YearMonth']= pd.to_datetime(df_orders['order_date']).dt.strftime('%Y-%m')
                 self.order_dates=df_orders['YearMonth'].unique().tolist()
                 self.order_date_selected=df_orders.iloc[0]['YearMonth']
@@ -89,12 +87,12 @@ class StatsState(rx.State):
                 self.order_ids=df_filtered['order_id'].unique().tolist()
                 order_id_value= self.order_ids[0]
                 self.order_id_selected=order_id_value
-                self.load_orders_table(self.order_id_selected)
+                self.load_orders_table()
                 #print(df_filtered.head())
 
     def load_orders_table(self):
         order_id= self.order_id_selected
-        self.df_orders =self.df_merged.query("order_id==@order_id").copy()
+        self.orders_table_data =self.df_merged.query("order_id==@order_id").copy().to_dict(orient='records')
 
                 
 def area_toggle() -> rx.Component:
@@ -157,8 +155,8 @@ def orders_chart() -> rx.Component:
 def orders_table():
     return ag_grid(
         id="ag_grid_basic_2",
-        row_data=StatsState.df_orders.to_dict("records"),
-        column_defs=[{"field": i} for i in StatsState.df_orders.columns],
+        row_data=StatsState.orders_table_data,
+        column_defs=[{"field": "product_id"},{"field": "customer_id"} ,{"field": "quantity"}, {"field": "unit_price"}, {"field": "discount"}],
         width="100%",
         height="40vh",
     )
