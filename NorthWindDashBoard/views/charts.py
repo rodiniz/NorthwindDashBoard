@@ -109,24 +109,7 @@ class StatsState(rx.State):
             self.orders_table_data =self.df_order_details.query("order_id==@order_id").copy().to_dict(orient='records')          
             self.loading_orders=False
            
-def area_toggle() -> rx.Component:
-    return rx.cond(
-        StatsState.area_toggle,
-        rx.icon_button(
-            rx.icon("area-chart"),
-            size="2",
-            cursor="pointer",
-            variant="surface",
-            on_click=StatsState.toggle_areachart,
-        ),
-        rx.icon_button(
-            rx.icon("bar-chart-3"),
-            size="2",
-            cursor="pointer",
-            variant="surface",
-            on_click=StatsState.toggle_areachart,
-        ),
-    )
+
 
 
 def revenue_chart() -> rx.Component:
@@ -141,6 +124,7 @@ def revenue_chart() -> rx.Component:
                 rx.recharts.x_axis(data_key="order_date"),
                 rx.recharts.y_axis(),
                 rx.recharts.legend(),
+                rx.recharts.graphing_tooltip(),
                 data=StatsState.revenue_data,              
                 width="100%",
                 height=250,
