@@ -74,9 +74,10 @@ def index() -> rx.Component:
                             StatsState.order_ids,
                             value=StatsState.order_id_selected,
                             size="3",
-                            width="200px",
+                            width="100px",
                             on_change= StatsState.order_id_change        
                         ),
+                        rx.spinner(size="3",loading=StatsState.loading_orders),
                         align="center",
                         spacing="2",
                     ),                    

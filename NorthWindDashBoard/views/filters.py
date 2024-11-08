@@ -12,7 +12,7 @@ def filters() -> rx.Component:
                     StatsState.order_dates,
                     value=StatsState.order_date_selected,
                     size="3",
-                    width="200px",
+                    width="130px",
                     on_change= StatsState.on_change        
                 ),
                 width="100%"

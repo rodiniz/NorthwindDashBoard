@@ -27,13 +27,15 @@ class StatsState(rx.State):
     order_id_selected:str=""
     orders_table_data:list[dict]
     df_orders:pd.DataFrame=None
+    loading_data:bool=False
+    loading_orders:bool=False
+    df_order_details:pd.DataFrame=None  
 
-        
     def toggle_areachart(self):
         self.area_toggle = not self.area_toggle
 
     def load_data(self):      
-       
+        self.loading_data=True       
         with rx.session() as session:
                 self.users_count = session.exec(func.count(Customers.customer_id)).scalar()                
                 df_orders = pd.read_sql("SELECT  * from orders",session.connection())
@@ -41,10 +43,14 @@ class StatsState(rx.State):
                 self.order_dates=df_orders['YearMonth'].unique().tolist()
                 self.order_date_selected=df_orders.iloc[0]['YearMonth']
                 self.load_by_date()
+                self.loading_data=False
+                yield
                 
-    def on_change(self,ev):
+    def on_change(self,ev): 
+         self.loading_data=True        
          self.order_date_selected=ev
          self.load_by_date()
+         self.loading_data=False
 
     def order_id_change(self,ev):
        self.order_id_selected= ev
@@ -90,11 +96,19 @@ class StatsState(rx.State):
                 self.load_orders_table()
                 #print(df_filtered.head())
 
+        
     def load_orders_table(self):
+        self.loading_orders=True        
         order_id= self.order_id_selected
-        self.orders_table_data =self.df_merged.query("order_id==@order_id").copy().to_dict(orient='records')
-
-                
+        with rx.session() as session:
+            #print(order_id)
+            if self.df_order_details is None:
+                self.df_order_details = pd.read_sql('SELECT od.order_id,p.product_name, od.quantity, od.unit_price, od.discount fROM order_details od join products p on od.product_id= p.product_id',session.connection())
+            self.df_order_details['final_price']= self.df_order_details['unit_price'] * self.df_order_details['quantity']
+            self.df_order_details['final_price'] = self.df_order_details['final_price'].apply(lambda x: "${:.1f}k".format((x/1000)))
+            self.orders_table_data =self.df_order_details.query("order_id==@order_id").copy().to_dict(orient='records')          
+            self.loading_orders=False
+           
 def area_toggle() -> rx.Component:
     return rx.cond(
         StatsState.area_toggle,
@@ -118,18 +132,21 @@ def area_toggle() -> rx.Component:
 def revenue_chart() -> rx.Component:
     return rx.cond(
             StatsState.area_toggle,
-                rx.recharts.line_chart(
-                rx.recharts.line(
+            rx.recharts.bar_chart(
+                rx.recharts.bar(
                     data_key="revenue",
-                ),           
+                    stroke=rx.color("accent", 9),
+                    fill=rx.color("accent", 8),
+                ),
                 rx.recharts.x_axis(data_key="order_date"),
                 rx.recharts.y_axis(),
-                rx.recharts.graphing_tooltip(),
                 rx.recharts.legend(),
-                data=StatsState.revenue_data,
+                data=StatsState.revenue_data,              
                 width="100%",
-                height=300,
-            )
+                height=250,
+            ),
+            
+             
         )
     
 
@@ -156,51 +173,7 @@ def orders_table():
     return ag_grid(
         id="ag_grid_basic_2",
         row_data=StatsState.orders_table_data,
-        column_defs=[{"field": "product_id"},{"field": "customer_id"} ,{"field": "quantity"}, {"field": "unit_price"}, {"field": "discount"}],
+        column_defs=[{"field": "product_name"},{"field": "quantity"}, {"field": "unit_price"}, {"field": "discount"},{"field":"final_price"}],
         width="100%",
         height="40vh",
-    )
-def pie_chart() -> rx.Component:
-    return rx.cond(
-        StatsState.timeframe == "Yearly",
-        rx.recharts.pie_chart(
-            rx.recharts.pie(
-                data=StatsState.yearly_device_data,
-                data_key="value",
-                name_key="name",
-                cx="50%",
-                cy="50%",
-                padding_angle=1,
-                inner_radius="70",
-                outer_radius="100",
-                label=True,
-            ),
-            rx.recharts.legend(),
-            height=300,
-        ),
-        rx.recharts.pie_chart(
-            rx.recharts.pie(
-                data=StatsState.device_data,
-                data_key="value",
-                name_key="name",
-                cx="50%",
-                cy="50%",
-                padding_angle=1,
-                inner_radius="70",
-                outer_radius="100",
-                label=True,
-            ),
-            rx.recharts.legend(),
-            height=300,
-        ),
-    )
-
-
-def timeframe_select() -> rx.Component:
-    return rx.select(
-        ["Monthly", "Yearly"],
-        default_value="Monthly",
-        value=StatsState.timeframe,
-        variant="surface",
-        on_change=StatsState.set_timeframe,
-    )
+    )    
