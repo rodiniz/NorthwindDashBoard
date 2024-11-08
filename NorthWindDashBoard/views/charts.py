@@ -4,6 +4,7 @@ import pandas as pd
 from reflex.components.radix.themes.base import (
     LiteralAccentColor,
 )
+from reflex_ag_grid import ag_grid
 
 from ..models.customers import Customers, Order
 
@@ -23,6 +24,12 @@ class StatsState(rx.State):
     order_dates:list[str]=[]
     order_date_selected:str=""
     df_merged:pd.DataFrame=None
+
+    order_ids:list[str]=[]
+    order_id_selected:str=""
+    orders_table_data=list[dict]=[]
+    df_orders:pd.DataFrame=None
+
         
     def toggle_areachart(self):
         self.area_toggle = not self.area_toggle
@@ -40,6 +47,10 @@ class StatsState(rx.State):
     def on_change(self,ev):
          self.order_date_selected=ev
          self.load_by_date()
+
+    def order_id_change(self,ev):
+       self.order_id_selected= ev
+       self.load_orders_table()
         
     def load_by_date(self):
             with rx.session() as session:
@@ -74,8 +85,16 @@ class StatsState(rx.State):
                     'order_id': 'number_of_orders'                   
                 })
                 self.orders_data=orders_result.to_dict(orient='records')      
-                #print(orders_result.head())
-                
+
+                self.order_ids=df_filtered['order_id'].unique().tolist()
+                order_id_value= self.order_ids[0]
+                self.order_id_selected=order_id_value
+                self.load_orders_table(self.order_id_selected)
+                #print(df_filtered.head())
+
+    def load_orders_table(self):
+        order_id= self.order_id_selected
+        self.df_orders =self.df_merged.query("order_id==@order_id").copy()
 
                 
 def area_toggle() -> rx.Component:
@@ -96,43 +115,6 @@ def area_toggle() -> rx.Component:
             on_click=StatsState.toggle_areachart,
         ),
     )
-
-
-def _create_gradient(color: LiteralAccentColor, id: str) -> rx.Component:
-    return (
-        rx.el.svg.defs(
-            rx.el.svg.linear_gradient(
-                rx.el.svg.stop(
-                    stop_color=rx.color(color, 7), offset="5%", stop_opacity=0.8
-                ),
-                rx.el.svg.stop(stop_color=rx.color(color, 7), offset="95%", stop_opacity=0),
-                x1=0,
-                x2=0,
-                y1=0,
-                y2=1,
-                id=id,
-            ),
-        ),
-    )
-
-
-def _custom_tooltip(color: LiteralAccentColor) -> rx.Component:
-    return (
-        rx.recharts.graphing_tooltip(
-            separator=" : ",
-            content_style={
-                "backgroundColor": rx.color("gray", 1),
-                "borderRadius": "var(--radius-2)",
-                "borderWidth": "1px",
-                "borderColor": rx.color(color, 7),
-                "padding": "0.5rem",
-                "boxShadow": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
-            },
-            is_animation_active=True,
-        ),
-    )
-
-
 
 
 def revenue_chart() -> rx.Component:
@@ -172,7 +154,14 @@ def orders_chart() -> rx.Component:
             )
         )
 
-
+def orders_table():
+    return ag_grid(
+        id="ag_grid_basic_2",
+        row_data=StatsState.df_orders.to_dict("records"),
+        column_defs=[{"field": i} for i in StatsState.df_orders.columns],
+        width="100%",
+        height="40vh",
+    )
 def pie_chart() -> rx.Component:
     return rx.cond(
         StatsState.timeframe == "Yearly",

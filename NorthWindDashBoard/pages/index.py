@@ -7,7 +7,7 @@ from ..views.stats_cards import stats_cards
 from ..views.charts import (    
     revenue_chart,
     orders_chart,
-    pie_chart,
+    orders_table,
     StatsState,
 )
 
@@ -69,6 +69,14 @@ def index() -> rx.Component:
                     rx.hstack(
                         rx.icon("user-round-search", size=20),
                         rx.text("Orders", size="4", weight="medium"),
+                        rx.text("Order id", size="4", weight="small"),
+                        rx.select(                            
+                            StatsState.order_ids,
+                            value=StatsState.order_id_selected,
+                            size="3",
+                            width="200px",
+                            on_change= StatsState.order_id_change        
+                        ),
                         align="center",
                         spacing="2",
                     ),                    
@@ -76,7 +84,7 @@ def index() -> rx.Component:
                     width="100%",
                     justify="between",
                 ),
-                pie_chart(),
+                orders_table(),
             ),            
             gap="1rem",
             grid_template_columns=[

@@ -69,35 +69,6 @@ def menu_item(text: str, url: str) -> rx.Component:
         width="100%",
     )
 
-
-def navbar_footer() -> rx.Component:
-    """Navbar footer.
-
-    Returns:
-        The navbar footer component.
-    """
-    return rx.hstack(
-        rx.link(
-            rx.text("Docs", size="3"),
-            href="https://reflex.dev/docs/getting-started/introduction/",
-            color_scheme="gray",
-            underline="none",
-        ),
-        rx.link(
-            rx.text("Blog", size="3"),
-            href="https://reflex.dev/blog/",
-            color_scheme="gray",
-            underline="none",
-        ),
-        rx.spacer(),
-        rx.color_mode.button(style={"opacity": "0.8", "scale": "0.95"}),
-        justify="start",
-        align="center",
-        width="100%",
-        padding="0.35em",
-    )
-
-
 def menu_button() -> rx.Component:
     # Get all the decorated pages and add them to the menu.
     from reflex.page import get_decorated_pages
