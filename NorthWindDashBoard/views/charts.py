@@ -10,22 +10,12 @@ from ..models.customers import Customers
 
 
 column_defs = [
-    ag_grid.column_def(
-        field="order_id", header_name="Order Id"
-    ),
-    ag_grid.column_def(field="product_name", header_name="Product Name"),
-    ag_grid.column_def(
-        field="quantity", header_name="Quantity"
-    ),
-    ag_grid.column_def(
-        field="unit_price_formated", header_name="Price"
-    ),
-    ag_grid.column_def(
-        field="discount", header_name="Discount"
-    ),
-    ag_grid.column_def(
-        field="final_price", header_name="Total"
-    ),
+     ag_grid.column_def(field="order_id", header_name="Order Id",rowGroup= True),
+     ag_grid.column_def(field="product_name", header_name="Product Name"),
+     ag_grid.column_def(field="quantity", header_name="Quantity"),
+     ag_grid.column_def(field="unit_price_formated", header_name="Price"),
+     ag_grid.column_def(field="discount", header_name="Discount"),
+     ag_grid.column_def(field="final_price", header_name="Total"),
   
 ]
 
@@ -181,8 +171,7 @@ def orders_table():
     return ag_grid(
         id="ag_grid_basic_2",
         row_data=StatsState.orders_table_data,
-        column_defs=column_defs,
-        auto_group_column_def=
+        column_defs=column_defs,       
         width="100%",
         height="40vh",
     )    
