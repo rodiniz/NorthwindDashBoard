@@ -10,6 +10,9 @@ from ..models.customers import Customers
 
 
 column_defs = [
+    ag_grid.column_def(
+        field="order_id", header_name="Order Id"
+    ),
     ag_grid.column_def(field="product_name", header_name="Product Name"),
     ag_grid.column_def(
         field="quantity", header_name="Quantity"
@@ -23,9 +26,7 @@ column_defs = [
     ag_grid.column_def(
         field="final_price", header_name="Total"
     ),
-    ag_grid.column_def(
-        field="order_date", header_name="Order Date"
-    ),
+  
 ]
 
 class StatsState(rx.State):
@@ -37,12 +38,12 @@ class StatsState(rx.State):
     users_count:int
     total_sales:float
     orders_count:int
-    order_dates:list[str]=[]
-    order_date_selected:str=""
+    order_months:list[str]=[]
+    order_month_selected:str=""
     df_merged:pd.DataFrame=None
 
-    order_ids:list[str]=[]
-    order_id_selected:str=""
+    order_dates:list[str]=[]
+    order_date_selected:str=""
     orders_table_data:list[dict]
     df_orders:pd.DataFrame=None
     loading_data:bool=False
@@ -69,8 +70,8 @@ class StatsState(rx.State):
         self.load_data_frames()
         
         self.df_orders['YearMonth']= pd.to_datetime(self.df_orders['order_date']).dt.strftime('%Y-%m')
-        self.order_dates=self.df_orders['YearMonth'].unique().tolist()
-        self.order_date_selected=self.df_orders.iloc[0]['YearMonth']      
+        self.order_months=self.df_orders['YearMonth'].unique().tolist()
+        self.order_month_selected=self.df_orders.iloc[0]['YearMonth']      
         self.loading_data=True       
         self.load_by_date()
         self.loading_data=False
@@ -78,18 +79,18 @@ class StatsState(rx.State):
                 
     def on_change(self,ev): 
          self.loading_data=True        
-         self.order_date_selected=ev
+         self.order_month_selected=ev
          self.load_by_date()
          self.loading_data=False
 
     def order_id_change(self,ev):
-       self.order_id_selected= ev
+       self.order_date_selected= ev
        self.load_orders_table()
         
     def load_by_date(self):
         self.df_merged['YearMonth']= pd.to_datetime(self.df_merged['order_date']).dt.strftime('%Y-%m')
 
-        value= self.order_date_selected    
+        value= self.order_month_selected    
         df_filtered=self.df_merged.query("YearMonth==@value").copy()
 
         df_filtered['final_price']= df_filtered['unit_price'] * df_filtered['quantity']
@@ -114,9 +115,8 @@ class StatsState(rx.State):
         })
         self.orders_data=orders_result.to_dict(orient='records')      
 
-        self.order_ids=df_filtered['order_id'].unique().tolist()
-        order_id_value= self.order_ids[0]
-        self.order_id_selected=order_id_value
+        self.order_dates=df_filtered['order_date'].unique().tolist()       
+        self.order_date_selected= self.order_dates[0]
         self.load_orders_table()
                
     def formatCurrency(self,curr):     
@@ -124,11 +124,13 @@ class StatsState(rx.State):
         
     def load_orders_table(self):
         self.loading_orders=True        
-        order_id= self.order_id_selected
+        order_date= self.order_date_selected
         self.df_order_details['final_price']= self.df_order_details['unit_price'] * self.df_order_details['quantity']
         self.df_order_details['unit_price_formated'] = self.df_order_details['unit_price'].apply(lambda x: "${:.1f}".format((x)))
         self.df_order_details['final_price'] = self.df_order_details['final_price'].apply(lambda x: "${:.1f}".format((x)))
-        self.orders_table_data =self.df_order_details.query("order_id==@order_id").copy().to_dict(orient='records')          
+        self.df_order_details['order_date'] = pd.to_datetime(self.df_order_details['order_date'])
+        filtered_df = self.df_order_details[self.df_order_details['order_date'] == order_date]
+        self.orders_table_data =filtered_df.to_dict(orient='records')          
         self.loading_orders=False
            
 
@@ -180,6 +182,7 @@ def orders_table():
         id="ag_grid_basic_2",
         row_data=StatsState.orders_table_data,
         column_defs=column_defs,
+        auto_group_column_def=
         width="100%",
         height="40vh",
     )    

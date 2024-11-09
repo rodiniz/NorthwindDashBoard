@@ -9,8 +9,8 @@ def filters() -> rx.Component:
                 rx.heading("Filters"),
                 rx.text("Year and month"),
                 rx.select(
-                    StatsState.order_dates,
-                    value=StatsState.order_date_selected,
+                    StatsState.order_months,
+                    value=StatsState.order_month_selected,
                     size="3",
                     width="130px",
                     on_change= StatsState.on_change        
