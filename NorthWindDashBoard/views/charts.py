@@ -21,8 +21,7 @@ column_defs = [
 
 class StatsState(rx.State):
     area_toggle: bool = True
-    selected_tab: str = "revenue"
-    timeframe: str = "Monthly"    
+    selected_tab: str = "revenue"       
     revenue_data = []
     orders_data = []    
     users_count:int
@@ -77,36 +76,39 @@ class StatsState(rx.State):
        self.order_date_selected= ev
        self.load_orders_table()
         
+    def _prepare_filtered_data(self):
+        """Prepare and filter the data for the selected month."""
+        self.df_merged['YearMonth'] = pd.to_datetime(self.df_merged['order_date']).dt.strftime('%Y-%m')
+        df_filtered = self.df_merged.query("YearMonth==@self.order_month_selected").copy()
+        df_filtered['final_price'] = df_filtered['unit_price'] * df_filtered['quantity']
+        df_filtered['order_date'] = df_filtered['order_date'].astype(str)
+        return df_filtered
+
+    def _calculate_revenue_data(self, df_filtered):
+        """Calculate revenue data grouped by order date."""
+        result = df_filtered.groupby(['order_date'])['final_price'].sum().reset_index()
+        result = result.rename(columns={'final_price': 'revenue'})
+        return result.to_dict(orient='records')
+
+    def _calculate_orders_data(self, df_filtered):
+        """Calculate unique orders count data grouped by order date."""
+        orders_result = df_filtered.groupby(['order_date'])['order_id'].nunique().reset_index()
+        orders_result = orders_result.rename(columns={'order_id': 'number_of_orders'})
+        return orders_result.to_dict(orient='records')
+
+    def _update_summary_stats(self, df_filtered):
+        """Update summary statistics."""
+        self.total_sales = self.formatCurrency(df_filtered['final_price'].sum())
+        self.orders_count = len(df_filtered.groupby('order_id'))
+        self.order_dates = df_filtered['order_date'].unique().tolist()
+        self.order_date_selected = self.order_dates[0]
+
     def load_by_date(self):
-        self.df_merged['YearMonth']= pd.to_datetime(self.df_merged['order_date']).dt.strftime('%Y-%m')
-
-        value= self.order_month_selected    
-        df_filtered=self.df_merged.query("YearMonth==@value").copy()
-
-        df_filtered['final_price']= df_filtered['unit_price'] * df_filtered['quantity']
-        self.total_sales= self.formatCurrency(df_filtered['final_price'].sum())       
-
-                    
-        self.orders_count=  len(df_filtered.groupby('order_id'))
-        
-        df_filtered['order_date']=df_filtered['order_date'].astype(str)
-       
-        result = df_filtered.groupby(['order_date'])['final_price'].sum().reset_index()               
-        
-        result = result.rename(columns={
-            'final_price': 'revenue'                   
-        })
-        self.revenue_data=result.to_dict(orient='records')
-
-        orders_result= df_filtered.groupby(['order_date'])['order_id'].count().reset_index()
-        # number_of_orders
-        orders_result = orders_result.rename(columns={
-            'order_id': 'number_of_orders'                   
-        })
-        self.orders_data=orders_result.to_dict(orient='records')      
-
-        self.order_dates=df_filtered['order_date'].unique().tolist()       
-        self.order_date_selected= self.order_dates[0]
+        """Load and process data by date."""
+        df_filtered = self._prepare_filtered_data()
+        self.revenue_data = self._calculate_revenue_data(df_filtered)
+        self.orders_data = self._calculate_orders_data(df_filtered)
+        self._update_summary_stats(df_filtered)
         self.load_orders_table()
                
     def formatCurrency(self,curr):     
@@ -122,9 +124,13 @@ class StatsState(rx.State):
         filtered_df = self.df_order_details[self.df_order_details['order_date'] == order_date]
         self.orders_table_data =filtered_df.to_dict(orient='records')          
         self.loading_orders=False
-           
 
-
+    def _prepare_combined_data(self):
+        """Prepare data for the combination chart by merging revenue and orders data."""
+        revenue_df = pd.DataFrame(self.revenue_data)
+        orders_df = pd.DataFrame(self.orders_data)
+        combined_data = pd.merge(revenue_df, orders_df, on='order_date')
+        return combined_data.to_dict('records')
 
 def revenue_chart() -> rx.Component:
     return rx.cond(
@@ -170,8 +176,79 @@ def orders_chart() -> rx.Component:
 def orders_table():
     return ag_grid(
         id="ag_grid_basic_2",
-        row_data=StatsState.orders_table_data,
+        row_data=StatsState.orders_table_data,    
         column_defs=column_defs,       
         width="100%",
         height="40vh",
     )    
+
+def line_chart() -> rx.Component:
+    """Line chart showing both revenue and orders over time."""
+    return rx.recharts.line_chart(
+        rx.recharts.line(
+            data_key="revenue",
+            stroke=rx.color("accent", 9),
+            name="Revenue"
+        ),
+        rx.recharts.line(
+            data_key="number_of_orders",
+            stroke=rx.color("accent", 6),
+            name="Orders"
+        ),
+        rx.recharts.x_axis(data_key="order_date"),
+        rx.recharts.y_axis(),
+        rx.recharts.legend(),
+        rx.recharts.graphing_tooltip(),
+        data=StatsState.revenue_data,
+        width="100%",
+        height=300,
+    )
+
+def bar_chart() -> rx.Component:
+    """Bar chart showing revenue and orders side by side."""
+    return rx.recharts.bar_chart(
+        rx.recharts.bar(
+            data_key="revenue",
+            fill=rx.color("accent", 9),
+            name="Revenue"
+        ),
+        rx.recharts.bar(
+            data_key="number_of_orders",
+            fill=rx.color("accent", 6),
+            name="Orders"
+        ),
+        rx.recharts.x_axis(data_key="order_date"),
+        rx.recharts.y_axis(),
+        rx.recharts.legend(),
+        rx.recharts.graphing_tooltip(),
+        data=StatsState._prepare_combined_data(StatsState),
+        width="100%",
+        height=300,
+    )
+
+def combination_chart() -> rx.Component:
+    """Combination chart showing revenue as bars and orders as a line."""
+    return rx.recharts.composed_chart(
+        rx.recharts.bar(
+            data_key="revenue",
+            fill=rx.color("accent", 9),
+            name="Revenue"
+        ),
+        rx.recharts.line(
+            data_key="number_of_orders",
+            stroke=rx.color("accent", 6),
+            name="Orders",
+            y_axis_id="right"
+        ),
+        rx.recharts.x_axis(data_key="order_date"),
+        rx.recharts.y_axis(),
+        rx.recharts.y_axis(
+            y_axis_id="right",
+            orientation="right"
+        ),
+        rx.recharts.legend(),
+        rx.recharts.graphing_tooltip(),
+        data=StatsState._prepare_combined_data(StatsState),
+        width="100%",
+        height=300,
+    )

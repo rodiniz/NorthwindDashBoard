@@ -65,7 +65,7 @@ def sidebar_item(text: str, url: str) -> rx.Component:
             rx.match(
                 text,
                 ("Overview", sidebar_item_icon("home")),
-                ("Table", sidebar_item_icon("table-2")),              
+                ("About", sidebar_item_icon("table-2")),              
                  sidebar_item_icon("layout-dashboard"),
             ),
             rx.text(text, size="3", weight="regular"),
@@ -118,10 +118,7 @@ def sidebar() -> rx.Component:
     # The ordered page routes.
     ordered_page_routes = [
         "/",
-        "/table",
-        "/about",
-        "/profile",
-        "/settings",
+        "/about"       
     ]
 
     # Get the decorated pages.
