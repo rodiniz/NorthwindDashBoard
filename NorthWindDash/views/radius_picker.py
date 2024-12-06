@@ -13,7 +13,7 @@ def radius_picker() -> rx.Component:
             rx.select(
                 [
                     "none",
-                    "small",
+                    "light",
                     "medium",
                     "large",
                     "full",

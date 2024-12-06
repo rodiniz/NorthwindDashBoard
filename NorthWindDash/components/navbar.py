@@ -1,6 +1,6 @@
 """Navbar component for the app."""
 
-from NorthWindDashBoard import styles
+from NorthWindDash import styles
 
 import reflex as rx
 

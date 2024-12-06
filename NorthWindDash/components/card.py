@@ -1,5 +1,5 @@
 import reflex as rx
-from NorthWindDashBoard import styles
+from NorthWindDash import styles
 
 
 def card(*children, **props):

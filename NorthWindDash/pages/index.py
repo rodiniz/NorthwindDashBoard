@@ -69,7 +69,7 @@ def index() -> rx.Component:
                     rx.hstack(
                         rx.icon("user-round-search", size=20),
                         rx.text("Orders", size="4", weight="medium"),
-                        rx.text("Order date", size="4", weight="small"),
+                        rx.text("Order date", size="4", weight="light"),
                         rx.select(                            
                             StatsState.order_dates,
                             value=StatsState.order_date_selected,

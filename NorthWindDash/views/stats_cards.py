@@ -1,6 +1,6 @@
 import reflex as rx
 
-from NorthWindDashBoard.views.charts import StatsState
+from NorthWindDash.views.charts import StatsState
 from .. import styles
 
 

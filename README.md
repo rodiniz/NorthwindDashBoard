@@ -71,3 +71,6 @@ to organize your state.
 
 You can either define substates in their own files, or if the state is
 specific to a page, you can define it in the page file itself.
+```bash
+reflex deploy --project 9733a48a-eecf-4da7-acc1-d5374726c0fb --envfile .env
+```
